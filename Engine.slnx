@@ -1,4 +1,0 @@
-<Solution>
-  <Project Path="Engine/Engine.csproj" />
-  <Project Path="Tools/ShaderTool/ShaderTool.csproj" />
-</Solution>

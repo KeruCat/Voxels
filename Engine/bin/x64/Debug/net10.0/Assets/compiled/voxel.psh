@@ -1,0 +1,46 @@
+#pragma pack_matrix(row_major)
+
+static const float  Bayer4_0[int(16)] = { 0.0f, 8.0f, 2.0f, 10.0f, 12.0f, 4.0f, 14.0f, 6.0f, 3.0f, 11.0f, 1.0f, 9.0f, 15.0f, 7.0f, 13.0f, 5.0f };
+
+float BayerThreshold_0(float2 pixel_0)
+{
+    uint2 p_0 = uint2(pixel_0) & 3U;
+    return (Bayer4_0[p_0.y * 4U + p_0.x] + 0.5f) / 16.0f;
+}
+
+struct FSInput_0
+{
+    float4 Position_0 : SV_POSITION;
+    float4 Color_0 : COLOR00;
+    float Opacity_0 : TEXCOORD00;
+};
+
+float4 FSMain(FSInput_0 vsOut) : SV_TARGET
+{
+
+    FSInput_0 _S1 = vsOut;
+
+    bool _S2;
+
+    if((vsOut.Opacity_0) < 1.0f)
+    {
+
+        _S2 = (_S1.Opacity_0) <= (BayerThreshold_0(_S1.Position_0.xy));
+
+    }
+    else
+    {
+
+        _S2 = false;
+
+    }
+
+    if(_S2)
+    {
+
+        discard;
+
+    }
+
+    return _S1.Color_0;
+}

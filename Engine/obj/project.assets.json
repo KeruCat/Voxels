@@ -81,65 +81,6 @@
           }
         }
       },
-      "Friflo.Engine.ECS/3.6.0": {
-        "type": "package",
-        "dependencies": {
-          "Friflo.Json.Fliox": "1.0.4"
-        },
-        "compile": {
-          "lib/net8.0/Friflo.Engine.ECS.dll": {
-            "related": ".xml"
-          }
-        },
-        "runtime": {
-          "lib/net8.0/Friflo.Engine.ECS.dll": {
-            "related": ".xml"
-          }
-        }
-      },
-      "Friflo.Json.Burst/1.0.4": {
-        "type": "package",
-        "compile": {
-          "lib/net8.0/Friflo.Json.Burst.dll": {
-            "related": ".xml"
-          }
-        },
-        "runtime": {
-          "lib/net8.0/Friflo.Json.Burst.dll": {
-            "related": ".xml"
-          }
-        }
-      },
-      "Friflo.Json.Fliox/1.0.4": {
-        "type": "package",
-        "dependencies": {
-          "Friflo.Json.Burst": "1.0.4",
-          "Friflo.Json.Fliox.Annotation": "1.0.4"
-        },
-        "compile": {
-          "lib/net8.0/Friflo.Json.Fliox.dll": {
-            "related": ".xml"
-          }
-        },
-        "runtime": {
-          "lib/net8.0/Friflo.Json.Fliox.dll": {
-            "related": ".xml"
-          }
-        }
-      },
-      "Friflo.Json.Fliox.Annotation/1.0.4": {
-        "type": "package",
-        "compile": {
-          "lib/net8.0/Friflo.Json.Fliox.Annotation.dll": {
-            "related": ".xml"
-          }
-        },
-        "runtime": {
-          "lib/net8.0/Friflo.Json.Fliox.Annotation.dll": {
-            "related": ".xml"
-          }
-        }
-      },
       "Hexa.NET.ImGui/2.2.9": {
         "type": "package",
         "dependencies": {
@@ -526,90 +467,6 @@
         "runtimes/win-x86/native/GraphicsEngineD3D12.dll",
         "runtimes/win-x86/native/GraphicsEngineOpenGL.dll",
         "runtimes/win-x86/native/GraphicsEngineVk.dll"
-      ]
-    },
-    "Friflo.Engine.ECS/3.6.0": {
-      "sha512": "Fj1ZExQzUuNLILSMviZE7B7r8U/0KBbXmTWr9+2Qut3yjyv2EVEky6Tzt40PbjTkc9/perkVBFn7uKr1sbt6Ag==",
-      "type": "package",
-      "path": "friflo.engine.ecs/3.6.0",
-      "files": [
-        ".nupkg.metadata",
-        ".signature.p7s",
-        "README.md",
-        "friflo.engine.ecs.3.6.0.nupkg.sha512",
-        "friflo.engine.ecs.nuspec",
-        "lib/net6.0/Friflo.Engine.ECS.dll",
-        "lib/net6.0/Friflo.Engine.ECS.xml",
-        "lib/net7.0/Friflo.Engine.ECS.dll",
-        "lib/net7.0/Friflo.Engine.ECS.xml",
-        "lib/net8.0/Friflo.Engine.ECS.dll",
-        "lib/net8.0/Friflo.Engine.ECS.xml",
-        "lib/netstandard2.1/Friflo.Engine.ECS.dll",
-        "lib/netstandard2.1/Friflo.Engine.ECS.xml",
-        "package-icon.png"
-      ]
-    },
-    "Friflo.Json.Burst/1.0.4": {
-      "sha512": "fMZ76Dx2W0rk9mpVqU8onl/fTydnJDks5wc9Dy19pReG4yv/joFvqvUWKVLl39y9O58yCt08o/w4DICrQbAZQg==",
-      "type": "package",
-      "path": "friflo.json.burst/1.0.4",
-      "files": [
-        ".nupkg.metadata",
-        ".signature.p7s",
-        "README.md",
-        "friflo.json.burst.1.0.4.nupkg.sha512",
-        "friflo.json.burst.nuspec",
-        "lib/net8.0/Friflo.Json.Burst.dll",
-        "lib/net8.0/Friflo.Json.Burst.xml",
-        "lib/netcoreapp3.1/Friflo.Json.Burst.dll",
-        "lib/netcoreapp3.1/Friflo.Json.Burst.xml",
-        "lib/netstandard2.0/Friflo.Json.Burst.dll",
-        "lib/netstandard2.0/Friflo.Json.Burst.xml",
-        "lib/netstandard2.1/Friflo.Json.Burst.dll",
-        "lib/netstandard2.1/Friflo.Json.Burst.xml",
-        "package-icon.png"
-      ]
-    },
-    "Friflo.Json.Fliox/1.0.4": {
-      "sha512": "yjhgryueSU/ZinDyJcFLx6Cd7FVz7M6ZJEHiQHQpG6FxGmGvYOvxRKVfrrz9kr7d2eXRk9oYfVUCI4vViS9CCA==",
-      "type": "package",
-      "path": "friflo.json.fliox/1.0.4",
-      "files": [
-        ".nupkg.metadata",
-        ".signature.p7s",
-        "README.md",
-        "friflo.json.fliox.1.0.4.nupkg.sha512",
-        "friflo.json.fliox.nuspec",
-        "lib/net8.0/Friflo.Json.Fliox.dll",
-        "lib/net8.0/Friflo.Json.Fliox.xml",
-        "lib/netcoreapp3.1/Friflo.Json.Fliox.dll",
-        "lib/netcoreapp3.1/Friflo.Json.Fliox.xml",
-        "lib/netstandard2.0/Friflo.Json.Fliox.dll",
-        "lib/netstandard2.0/Friflo.Json.Fliox.xml",
-        "lib/netstandard2.1/Friflo.Json.Fliox.dll",
-        "lib/netstandard2.1/Friflo.Json.Fliox.xml",
-        "package-icon.png"
-      ]
-    },
-    "Friflo.Json.Fliox.Annotation/1.0.4": {
-      "sha512": "0ZNQ1fFYQSkDYCPBX9oxUfMJMSnp8sBnDYT4Q8kFSnOt3UM27eOKbuINm5Qak1qLEMlHD7GrS83yhRfN2Az2Cw==",
-      "type": "package",
-      "path": "friflo.json.fliox.annotation/1.0.4",
-      "files": [
-        ".nupkg.metadata",
-        ".signature.p7s",
-        "README.md",
-        "friflo.json.fliox.annotation.1.0.4.nupkg.sha512",
-        "friflo.json.fliox.annotation.nuspec",
-        "lib/net8.0/Friflo.Json.Fliox.Annotation.dll",
-        "lib/net8.0/Friflo.Json.Fliox.Annotation.xml",
-        "lib/netcoreapp3.1/Friflo.Json.Fliox.Annotation.dll",
-        "lib/netcoreapp3.1/Friflo.Json.Fliox.Annotation.xml",
-        "lib/netstandard2.0/Friflo.Json.Fliox.Annotation.dll",
-        "lib/netstandard2.0/Friflo.Json.Fliox.Annotation.xml",
-        "lib/netstandard2.1/Friflo.Json.Fliox.Annotation.dll",
-        "lib/netstandard2.1/Friflo.Json.Fliox.Annotation.xml",
-        "package-icon.png"
       ]
     },
     "Hexa.NET.ImGui/2.2.9": {
@@ -1085,7 +942,6 @@
   "projectFileDependencyGroups": {
     "net10.0": [
       "DiligentGraphics.DiligentEngine.Core >= 2.5.6",
-      "Friflo.Engine.ECS >= 3.6.0",
       "Hexa.NET.ImGui >= 2.2.9",
       "Silk.NET.Input.Glfw >= 2.23.0",
       "Silk.NET.Windowing.Common >= 2.23.0",
@@ -1148,10 +1004,6 @@
           "DiligentGraphics.DiligentEngine.Core": {
             "target": "Package",
             "version": "[2.5.6, )"
-          },
-          "Friflo.Engine.ECS": {
-            "target": "Package",
-            "version": "[3.6.0, )"
           },
           "Hexa.NET.ImGui": {
             "target": "Package",
