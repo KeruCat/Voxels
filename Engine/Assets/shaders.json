@@ -1,0 +1,16 @@
+{
+  "include": ["."],
+  "outputDir": "compiled",
+  "catalog": { "file": "../Graphics/Shaders/Generated/ShaderCatalog.g.cs", "namespace": "Engine.Graphics.Shaders.Generated" },
+  "shaders": [
+    { 
+      "source": "voxel.slang",
+      "dir": ".",
+      "output": 
+      [ 
+        { "vertex": "VSMain" },
+        { "fragment": "FSMain" } 
+      ] 
+    }
+  ]
+}

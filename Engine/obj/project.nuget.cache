@@ -1,0 +1,31 @@
+{
+  "version": 2,
+  "dgSpecHash": "RctCgf69JNs=",
+  "success": true,
+  "projectFilePath": "C:\\Users\\false\\OneDrive\\Desktop\\Voxels\\Engine\\Engine.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\false\\.nuget\\packages\\diligent-sharpgen.runtime\\2.0.3\\diligent-sharpgen.runtime.2.0.3.nupkg.sha512",
+    "C:\\Users\\false\\.nuget\\packages\\diligentgraphics.diligentengine.core\\2.5.6\\diligentgraphics.diligentengine.core.2.5.6.nupkg.sha512",
+    "C:\\Users\\false\\.nuget\\packages\\friflo.engine.ecs\\3.6.0\\friflo.engine.ecs.3.6.0.nupkg.sha512",
+    "C:\\Users\\false\\.nuget\\packages\\friflo.json.burst\\1.0.4\\friflo.json.burst.1.0.4.nupkg.sha512",
+    "C:\\Users\\false\\.nuget\\packages\\friflo.json.fliox\\1.0.4\\friflo.json.fliox.1.0.4.nupkg.sha512",
+    "C:\\Users\\false\\.nuget\\packages\\friflo.json.fliox.annotation\\1.0.4\\friflo.json.fliox.annotation.1.0.4.nupkg.sha512",
+    "C:\\Users\\false\\.nuget\\packages\\hexa.net.imgui\\2.2.9\\hexa.net.imgui.2.2.9.nupkg.sha512",
+    "C:\\Users\\false\\.nuget\\packages\\hexagen.runtime\\1.1.21\\hexagen.runtime.1.1.21.nupkg.sha512",
+    "C:\\Users\\false\\.nuget\\packages\\microsoft.build.tasks.git\\1.1.0-beta-20204-02\\microsoft.build.tasks.git.1.1.0-beta-20204-02.nupkg.sha512",
+    "C:\\Users\\false\\.nuget\\packages\\microsoft.dotnet.platformabstractions\\3.1.6\\microsoft.dotnet.platformabstractions.3.1.6.nupkg.sha512",
+    "C:\\Users\\false\\.nuget\\packages\\microsoft.extensions.dependencymodel\\9.0.9\\microsoft.extensions.dependencymodel.9.0.9.nupkg.sha512",
+    "C:\\Users\\false\\.nuget\\packages\\microsoft.sourcelink.common\\1.1.0-beta-20204-02\\microsoft.sourcelink.common.1.1.0-beta-20204-02.nupkg.sha512",
+    "C:\\Users\\false\\.nuget\\packages\\microsoft.sourcelink.github\\1.1.0-beta-20204-02\\microsoft.sourcelink.github.1.1.0-beta-20204-02.nupkg.sha512",
+    "C:\\Users\\false\\.nuget\\packages\\silk.net.core\\2.23.0\\silk.net.core.2.23.0.nupkg.sha512",
+    "C:\\Users\\false\\.nuget\\packages\\silk.net.glfw\\2.23.0\\silk.net.glfw.2.23.0.nupkg.sha512",
+    "C:\\Users\\false\\.nuget\\packages\\silk.net.input.common\\2.23.0\\silk.net.input.common.2.23.0.nupkg.sha512",
+    "C:\\Users\\false\\.nuget\\packages\\silk.net.input.glfw\\2.23.0\\silk.net.input.glfw.2.23.0.nupkg.sha512",
+    "C:\\Users\\false\\.nuget\\packages\\silk.net.maths\\2.23.0\\silk.net.maths.2.23.0.nupkg.sha512",
+    "C:\\Users\\false\\.nuget\\packages\\silk.net.windowing.common\\2.23.0\\silk.net.windowing.common.2.23.0.nupkg.sha512",
+    "C:\\Users\\false\\.nuget\\packages\\silk.net.windowing.glfw\\2.23.0\\silk.net.windowing.glfw.2.23.0.nupkg.sha512",
+    "C:\\Users\\false\\.nuget\\packages\\system.commandline\\2.0.12\\system.commandline.2.0.12.nupkg.sha512",
+    "C:\\Users\\false\\.nuget\\packages\\ultz.native.glfw\\3.4.0\\ultz.native.glfw.3.4.0.nupkg.sha512"
+  ],
+  "logs": []
+}

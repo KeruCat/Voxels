@@ -1,0 +1,7 @@
+﻿<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<Project ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ImportGroup Condition=" '$(ExcludeRestorePackageImports)' != 'true' ">
+    <Import Project="$(NuGetPackageRoot)hexa.net.imgui\2.2.9\buildTransitive\Hexa.NET.ImGui.targets" Condition="Exists('$(NuGetPackageRoot)hexa.net.imgui\2.2.9\buildTransitive\Hexa.NET.ImGui.targets')" />
+    <Import Project="$(NuGetPackageRoot)diligentgraphics.diligentengine.core\2.5.6\build\DiligentGraphics.DiligentEngine.Core.targets" Condition="Exists('$(NuGetPackageRoot)diligentgraphics.diligentengine.core\2.5.6\build\DiligentGraphics.DiligentEngine.Core.targets')" />
+  </ImportGroup>
+</Project>

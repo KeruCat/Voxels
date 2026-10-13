@@ -1,0 +1,14 @@
+C:\Users\false\OneDrive\Desktop\Voxels\Tools\ShaderTool\bin\Debug\net10.0\ShaderTool.exe
+C:\Users\false\OneDrive\Desktop\Voxels\Tools\ShaderTool\bin\Debug\net10.0\ShaderTool.deps.json
+C:\Users\false\OneDrive\Desktop\Voxels\Tools\ShaderTool\bin\Debug\net10.0\ShaderTool.runtimeconfig.json
+C:\Users\false\OneDrive\Desktop\Voxels\Tools\ShaderTool\bin\Debug\net10.0\ShaderTool.dll
+C:\Users\false\OneDrive\Desktop\Voxels\Tools\ShaderTool\bin\Debug\net10.0\ShaderTool.pdb
+C:\Users\false\OneDrive\Desktop\Voxels\Tools\ShaderTool\obj\Debug\net10.0\ShaderTool.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\false\OneDrive\Desktop\Voxels\Tools\ShaderTool\obj\Debug\net10.0\ShaderTool.AssemblyInfoInputs.cache
+C:\Users\false\OneDrive\Desktop\Voxels\Tools\ShaderTool\obj\Debug\net10.0\ShaderTool.AssemblyInfo.cs
+C:\Users\false\OneDrive\Desktop\Voxels\Tools\ShaderTool\obj\Debug\net10.0\ShaderTool.csproj.CoreCompileInputs.cache
+C:\Users\false\OneDrive\Desktop\Voxels\Tools\ShaderTool\obj\Debug\net10.0\ShaderTool.dll
+C:\Users\false\OneDrive\Desktop\Voxels\Tools\ShaderTool\obj\Debug\net10.0\refint\ShaderTool.dll
+C:\Users\false\OneDrive\Desktop\Voxels\Tools\ShaderTool\obj\Debug\net10.0\ShaderTool.pdb
+C:\Users\false\OneDrive\Desktop\Voxels\Tools\ShaderTool\obj\Debug\net10.0\ShaderTool.genruntimeconfig.cache
+C:\Users\false\OneDrive\Desktop\Voxels\Tools\ShaderTool\obj\Debug\net10.0\ref\ShaderTool.dll
