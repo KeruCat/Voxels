@@ -30,6 +30,7 @@ public struct Chunk
 
     // ── GPU ──
     public GpuRange Gpu;                     // Gpu.IndexCount > 0 ⇒ лежит на GPU
-    public float FadeStart;                  // AppClock-время первого показа, -1 — ещё не показывался
+    public float FadeStart;                  // AppClock-время начала появления; Shown = false — ещё ни разу не показывался
+    public bool Shown;                       // показывался ли уже: первое появление с анимацией только у чанков из генератора
     public bool Visible;
 }

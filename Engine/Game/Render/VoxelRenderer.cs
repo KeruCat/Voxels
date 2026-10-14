@@ -3,10 +3,12 @@ using System.Runtime.InteropServices;
 using Diligent;
 using Engine;
 using Engine.Graphics;
+using Engine.Graphics.Images;
 using Engine.Graphics.Memory;
 using Engine.Graphics.Shaders;
 using Engine.Graphics.Shaders.Generated;
 using Game.Voxels;
+using System.IO;
 
 namespace Game.Render;
 
@@ -25,12 +27,18 @@ public enum DrawMode
 internal sealed unsafe class VoxelRenderer : IDisposable
 {
     [StructLayout(LayoutKind.Sequential)]
-    private struct ChunkConstants { public Matrix4x4 ViewProjection; public Vector4 Fade; } // x=время, y=длительность, z=подъём
+    private struct ChunkConstants
+    {
+        public Matrix4x4 ViewProjection;
+        public Vector4 Fade;        // x=время, y=длительность появления
+        public Vector4 AtlasInfo;   // x=колонок, y=строк, z=ширина атласа px, w=высота атласа px
+    }
     private readonly GraphicsContext _gfx;
     private readonly GpuArena _vtx, _idx;
     private readonly IPipelineState _pso;
     private readonly IShaderResourceBinding _srb;
     private readonly IBuffer _constants;
+    private readonly ITexture _atlas;      // атлас блоков (Blocks.png), сэмплится в пиксельном шейдере
     private IBuffer _origins = null!;
     private IBuffer _indirect = null!;     // аргументы DrawIndexedIndirect: тот же 20-байтовый DrawIndexedCmd
 
@@ -38,10 +46,11 @@ internal sealed unsafe class VoxelRenderer : IDisposable
     public DrawMode Mode { get; set; } = DrawMode.IndirectMulti;
     private int _capacity;
 
-    public VoxelRenderer(GraphicsContext gfx, GpuArena vtx, GpuArena idx)
+    public VoxelRenderer(GraphicsContext gfx, GpuArena vtx, GpuArena idx, string atlasPath)
     {
         (_gfx, _vtx, _idx) = (gfx, vtx, idx);
         var device = gfx.Device!;
+        _atlas = CreateAtlas(device, atlasPath);
         var sc = gfx.SwapChain!.GetDesc();
 
         IShader vs, ps;
@@ -65,7 +74,37 @@ internal sealed unsafe class VoxelRenderer : IDisposable
             PSODesc = new()
             {
                 Name = "Voxel PSO",
-                ResourceLayout = new() { DefaultVariableType = ShaderResourceVariableType.Static }
+                ResourceLayout = new()
+                {
+                    DefaultVariableType = ShaderResourceVariableType.Static,
+                    Variables = new[]
+                    {
+                        new ShaderResourceVariableDesc
+                        {
+                            ShaderStages = ShaderType.Pixel,
+                            Name = "atlas_0",
+                            Type = ShaderResourceVariableType.Mutable
+                        }
+                    },
+                    ImmutableSamplers = new[]
+                    {
+                        new ImmutableSamplerDesc
+                        {
+                            ShaderStages = ShaderType.Pixel,
+                            SamplerOrTextureName = "atlas_0",
+                            // пиксель-арт: без сглаживания, тайлы не смешиваются с соседями
+                            Desc = new()
+                            {
+                                MinFilter = FilterType.Point,
+                                MagFilter = FilterType.Point,
+                                MipFilter = FilterType.Point,
+                                AddressU = TextureAddressMode.Clamp,
+                                AddressV = TextureAddressMode.Clamp,
+                                AddressW = TextureAddressMode.Clamp
+                            }
+                        }
+                    }
+                }
             },
             Vs = vs,
             Ps = ps,
@@ -75,9 +114,9 @@ internal sealed unsafe class VoxelRenderer : IDisposable
                 {
                     LayoutElements = new[]
                     {
-                        // слот 0: VoxelVertex (8 байт) = PosFace(4×u8) + UvBlock(4×u8)
+                        // слот 0: VoxelVertex (8 байт) = PosFace(4×u8) + Packed(u32: тайл, повтор, угол)
                         new LayoutElement { InputIndex = 0, BufferSlot = 0, NumComponents = 4, ValueType = Diligent.ValueType.UInt8, IsNormalized = false },
-                        new LayoutElement { InputIndex = 1, BufferSlot = 0, NumComponents = 4, ValueType = Diligent.ValueType.UInt8, IsNormalized = false },
+                        new LayoutElement { InputIndex = 1, BufferSlot = 0, NumComponents = 1, ValueType = Diligent.ValueType.UInt32, IsNormalized = false },
                         // слот 1: origin чанка (xyz) + время начала показа (w), один на инстанс
                         new LayoutElement { InputIndex = 2, BufferSlot = 1, NumComponents = 4, ValueType = Diligent.ValueType.Float32,
                                             Frequency = InputElementFrequency.PerInstance, InstanceDataStepRate = 1 }
@@ -99,8 +138,37 @@ internal sealed unsafe class VoxelRenderer : IDisposable
               ?? throw new Exception("Voxel shader: constant buffer variable not found.");
         cb.Set(_constants, SetShaderResourceFlags.None);
         _srb = _pso.CreateShaderResourceBinding(true);
+        // Slang добавляет суффикс _0 к именам ресурсов (как cb_constants_0); без совпадения имени переменная не находится
+        var atlasVar = _srb.GetVariableByName(ShaderType.Pixel, "atlas_0")
+                       ?? throw new Exception("Voxel shader: atlas texture variable 'atlas_0' not found.");
+        atlasVar.Set(_atlas.GetDefaultView(TextureViewType.ShaderResource), SetShaderResourceFlags.None);
 
         GrowBuffers(1024);
+    }
+
+    /// <summary>Загружает Blocks.png (RGBA8) в текстуру. Размер должен совпасть с Atlas.Width × Atlas.Height.</summary>
+    private static ITexture CreateAtlas(IRenderDevice device, string path)
+    {
+        var img = PngDecoder.Decode(File.ReadAllBytes(path));
+        if (img.Width != Atlas.Width || img.Height != Atlas.Height)
+            throw new InvalidDataException($"Atlas must be {Atlas.Width}x{Atlas.Height}, got {img.Width}x{img.Height}: {path}");
+
+        fixed (byte* p = img.Rgba)
+        {
+            return device.CreateTexture(new()
+            {
+                Name = "Block atlas",
+                Type = ResourceDimension.Tex2d,
+                Width = (uint)img.Width, Height = (uint)img.Height,
+                MipLevels = 1,
+                Format = TextureFormat.RGBA8_UNorm,
+                BindFlags = BindFlags.ShaderResource,
+                Usage = Usage.Default
+            }, new TextureData
+            {
+                SubResources = new[] { new TextureSubResData { Data = (nint)p, Stride = (ulong)(img.Width * 4) } }
+            });
+        }
     }
 
     private void GrowBuffers(int count)
@@ -135,7 +203,8 @@ internal sealed unsafe class VoxelRenderer : IDisposable
         cb[0] = new ChunkConstants
         {
             ViewProjection = frame.ViewProjection,
-            Fade = new Vector4(AppClock.Seconds, 0.7f, 24, 0)
+            Fade = new Vector4(AppClock.Seconds, 0.7f, 24, 0),
+            AtlasInfo = new Vector4(Atlas.Columns, Atlas.Rows, Atlas.Width, Atlas.Height)
         };
         ctx.UnmapBuffer(_constants, MapType.Write);
         ctx.SetPipelineState(_pso);
@@ -202,6 +271,7 @@ internal sealed unsafe class VoxelRenderer : IDisposable
     {
         _origins.Dispose();
         _indirect.Dispose();
+        _atlas.Dispose();
         _constants.Dispose();
         _srb.Dispose();
         _pso.Dispose();

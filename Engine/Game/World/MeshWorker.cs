@@ -9,7 +9,7 @@ internal sealed class MeshWorker
     private static readonly (int X, int Y, int Z)[] FaceNeighbors =
         [(-1, 0, 0), (1, 0, 0), (0, -1, 0), (0, 1, 0), (0, 0, -1), (0, 0, 1)];
 
-    public readonly GreedyMesher Mesher = new();
+    public readonly BinaryGreedyMesher Mesher = new();
     public readonly NeighborSampler Sampler;
     private readonly MemoryPool _pool;
 

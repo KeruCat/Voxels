@@ -1,5 +1,9 @@
 #pragma pack_matrix(row_major)
 
+Texture2D<float4 > atlas_0 : register(t0);
+
+SamplerState atlas_sampler_0 : register(s0);
+
 static const float  Bayer4_0[int(16)] = { 0.0f, 8.0f, 2.0f, 10.0f, 12.0f, 4.0f, 14.0f, 6.0f, 3.0f, 11.0f, 1.0f, 9.0f, 15.0f, 7.0f, 13.0f, 5.0f };
 
 float BayerThreshold_0(float2 pixel_0)
@@ -11,8 +15,11 @@ float BayerThreshold_0(float2 pixel_0)
 struct FSInput_0
 {
     float4 Position_0 : SV_POSITION;
-    float4 Color_0 : COLOR00;
-    float Opacity_0 : TEXCOORD00;
+    float Shade_0 : COLOR00;
+    float2 TileOrigin_0 : TEXCOORD0;
+    float2 TileSize_0 : TEXCOORD1;
+    float2 Repeat_0 : TEXCOORD2;
+    float Opacity_0 : TEXCOORD3;
 };
 
 float4 FSMain(FSInput_0 vsOut) : SV_TARGET
@@ -42,5 +49,14 @@ float4 FSMain(FSInput_0 vsOut) : SV_TARGET
 
     }
 
-    return _S1.Color_0;
+    float4 texel_0 = atlas_0.SampleLevel(atlas_sampler_0, _S1.TileOrigin_0 + min(frac(_S1.Repeat_0), float2(0.99989998340606689f, 0.99989998340606689f)) * _S1.TileSize_0, 0.0f);
+
+    if((texel_0.w) < 0.5f)
+    {
+
+        discard;
+
+    }
+
+    return float4(texel_0.xyz * _S1.Shade_0, 1.0f);
 }

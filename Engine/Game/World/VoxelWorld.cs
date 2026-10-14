@@ -53,6 +53,11 @@ public sealed class VoxelWorld : IDisposable
     private readonly KeyQueue _toGenerate = new(), _toMesh = new(), _toUpload = new();
     private readonly List<ChunkKey> _spawnList = new();   // диск, отсортирован от ближних к дальним
     private int _spawnCursor;
+
+    // воздушные чанки: в хранилище не лежат, но соседи считают их готовыми
+    private readonly HashSet<ChunkKey> _air = new();
+    private readonly List<ChunkKey> _airScratch = new();
+    private const float NoFade = -1e6f;   // время появления в далёком прошлом: чанк сразу полностью виден
     private const int GenSelect = 256;      // сколько лучших выбираем за кадр для генерации
     private const int MeshSelect = 128;     // и для меширования
     private readonly ChunkKey[] _genSel, _meshSel, _uploadSel;
@@ -74,6 +79,7 @@ public sealed class VoxelWorld : IDisposable
 
     // ── для отладки: размеры очередей и время шагов последнего кадра (мс) ──
     public int PendingSpawn => _spawnList.Count - _spawnCursor;
+    public int AirCount => _air.Count;
     public int PendingGenerate => _toGenerate.Count;
     public int PendingMesh => _toMesh.Count;
     public int PendingUpload => _toUpload.Count;
@@ -161,7 +167,11 @@ public sealed class VoxelWorld : IDisposable
             ref var c = ref all[i];
             var min = new Vector3(c.Key.X - originX, c.Key.Y - originY, c.Key.Z - originZ) * Chunk.Size;
             bool vis = c.Gpu.IndexCount > 0 && test.Intersects(min, min + new Vector3(Chunk.Size));
-            if (vis && c.FadeStart < 0f) c.FadeStart = now;
+            if (vis && !c.Shown)
+            {
+                c.Shown = true;
+                c.FadeStart = now;
+            }
             c.Visible = vis;
             if (vis) count++;
         }
@@ -206,6 +216,29 @@ public sealed class VoxelWorld : IDisposable
             long dx = key.X - _cx, dz = key.Z - _cz;
             if (dx * dx + dz * dz <= r2) continue;
             Remove(i);
+        }
+
+        PruneAir(r2);
+    }
+
+    /// <summary>Забывает воздушные чанки вдали. Соседи, которые считали их готовыми, снова ждут их.</summary>
+    private void PruneAir(long r2)
+    {
+        if (_air.Count == 0) return;
+        _airScratch.Clear();
+        foreach (var k in _air)
+        {
+            long dx = k.X - _cx, dz = k.Z - _cz;
+            if (dx * dx + dz * dz > r2) _airScratch.Add(k);
+        }
+        foreach (var k in _airScratch)
+        {
+            _air.Remove(k);
+            foreach (var off in NeighborOffsets)
+            {
+                var nk = k.Plus(off);
+                if (WorldLimits.InY(nk.Y) && _store.TryGetIndex(nk, out int ni)) _store[ni].PendingNeighbors++;
+            }
         }
     }
 
@@ -261,7 +294,7 @@ public sealed class VoxelWorld : IDisposable
         for (int cy = WorldLimits.MinChunkY; cy <= WorldLimits.MaxChunkY; cy++)
         {
             var key = new ChunkKey(_cx + dx, cy, _cz + dz);
-            if (!_store.Contains(key)) _spawnList.Add(key);
+            if (!_store.Contains(key) && !_air.Contains(key)) _spawnList.Add(key);
         }
     }
 
@@ -287,7 +320,7 @@ public sealed class VoxelWorld : IDisposable
             for (int cy = WorldLimits.MinChunkY; cy <= WorldLimits.MaxChunkY; cy++)
             {
                 var key = new ChunkKey(_cx + dx, cy, _cz + dz);
-                if (!_store.Contains(key)) _spawnList.Add(key);
+                if (!_store.Contains(key) && !_air.Contains(key)) _spawnList.Add(key);
             }
         }
     }
@@ -298,7 +331,7 @@ public sealed class VoxelWorld : IDisposable
         while (budget > 0 && _spawnCursor < _spawnList.Count)
         {
             var key = _spawnList[_spawnCursor++];
-            if (_store.Contains(key)) continue;
+            if (_store.Contains(key) || _air.Contains(key)) continue;
             AddChunk(key);
             budget--;
         }
@@ -311,7 +344,7 @@ public sealed class VoxelWorld : IDisposable
         {
             var nk = key.Plus(off);
             if (!WorldLimits.InY(nk.Y)) continue;
-            if (!(_store.TryGetIndex(nk, out int ni) && _store[ni].Generated)) pending++;
+            if (!IsReady(nk)) pending++;
         }
         _store.Add(key, pending);
         _toGenerate.Enqueue(key);
@@ -384,7 +417,15 @@ public sealed class VoxelWorld : IDisposable
         if (!_store.TryGetIndex(job.Key, out int idx)) return;      // выгружен, пока считался
         if (_store[idx].Generated) return;                           // дубликат в той же пачке
 
-        if (job.HasVoxels) _store[idx].Voxels = _pool.AllocateFrom<ushort>(job.Buffer!.AsSpan());
+        if (!job.HasVoxels || !HasSolid(job.Buffer!))
+        {
+            // воздух не хранится: соседи и так теперь считают его готовым
+            _store.RemoveAt(idx);
+            _air.Add(job.Key);
+            DecrementNeighbors(job.Key);
+            return;
+        }
+        _store[idx].Voxels = _pool.AllocateFrom<ushort>(job.Buffer.AsSpan());
         _store[idx].Generated = true;
         OnGenerated(job.Key, idx);
     }
@@ -457,12 +498,26 @@ public sealed class VoxelWorld : IDisposable
     private void ApplyMesh(int i)
     {
         ref var job = ref _meshJobs[i];
-        if (job.IndexCount == 0) return;
-
         _store.TryGetIndex(job.Key, out int idx);
         ref var c = ref _store[idx];
-        var w = _meshWorkers[job.Slot];
 
+        // CPU-меш, который не успел загрузиться, заменяется новым
+        _pool.FreeIfAlive(ref c.MeshVertices);
+        _pool.FreeIfAlive(ref c.MeshIndices);
+        c.MeshVertexCount = c.MeshIndexCount = 0;
+
+        if (job.IndexCount == 0)
+        {
+            // блок стал пустым: старый меш на GPU убираем
+            if (c.Gpu.IndexCount > 0)
+            {
+                _sink.Release(c.Gpu);
+                c.Gpu = default;
+            }
+            return;
+        }
+
+        var w = _meshWorkers[job.Slot];
         c.MeshVertices = _pool.AllocateFrom<VoxelVertex>(w.Mesher.Vertices.AsSpan(0, job.VertexCount));
         c.MeshIndices = _pool.AllocateFrom<ushort>(w.Mesher.Indices.AsSpan(0, job.IndexCount));
         c.MeshVertexCount = job.VertexCount;
@@ -485,6 +540,7 @@ public sealed class VoxelWorld : IDisposable
                                       _pool.GetBytes(c.MeshIndices), c.MeshIndexCount, out GpuRange range);
             if (!ok) break;                                  // арена полна — остальное в следующем кадре
 
+            if (c.Gpu.IndexCount > 0) _sink.Release(c.Gpu);   // старый меш заменяем после загрузки нового
             c.Gpu = range;
             _pool.FreeIfAlive(ref c.MeshVertices);            // CPU-копия больше не нужна
             _pool.FreeIfAlive(ref c.MeshIndices);
@@ -509,7 +565,7 @@ public sealed class VoxelWorld : IDisposable
         && InRadius(k);
 
     private bool IsUploadPending(ChunkKey k) =>
-        _store.TryGetIndex(k, out int i) && _store[i].MeshIndexCount > 0 && _store[i].Gpu.IndexCount == 0;
+        _store.TryGetIndex(k, out int i) && _store[i].MeshIndexCount > 0;
 
     // ───────────── утилиты ─────────────
 
@@ -523,6 +579,152 @@ public sealed class VoxelWorld : IDisposable
         for (int dx = -1; dx <= 1; dx++)
             if ((dx | dy | dz) != 0) list.Add(new ChunkKey(dx, dy, dz));
         return list.ToArray();
+    }
+
+    // ───────────── редактирование блоков ─────────────
+
+    private readonly ushort[] _emptyChunk = new ushort[Vox.Volume];
+
+    /// <summary>Блок по мировым координатам вокселя. false — чанк ещё не сгенерирован или вне мира.</summary>
+    public bool TryGetBlock(int wx, int wy, int wz, out ushort block)
+    {
+        block = 0;
+        var key = ToChunk(wx, wy, wz, out int lx, out int ly, out int lz);
+        if (!WorldLimits.InY(key.Y)) return false;
+        if (!_store.TryGetIndex(key, out int idx)) return _air.Contains(key);   // воздушный чанк: известен, но не хранится
+        if (!_store[idx].Generated) return false;
+        if (_pool.IsAlive(_store[idx].Voxels))
+            block = _pool.GetSpan(_store[idx].Voxels)[Vox.Index(lx, ly, lz)];
+        return true;
+    }
+
+    /// <summary>
+    /// Меняет блок и ставит на перестройку меш затронутых чанков. Воздушный чанк, в который поставили блок,
+    /// создаётся заново и появляется без анимации; опустевший чанк становится воздухом.
+    /// Возвращает false, если чанк не готов или блок не изменился.
+    /// </summary>
+    public bool SetBlock(int wx, int wy, int wz, ushort block)
+    {
+        var key = ToChunk(wx, wy, wz, out int lx, out int ly, out int lz);
+        if (!WorldLimits.InY(key.Y)) return false;
+
+        if (!_store.TryGetIndex(key, out int idx))
+        {
+            if (block == 0 || !_air.Contains(key)) return false;     // воздух на воздухе, либо чанк ещё не сгенерирован
+            _air.Remove(key);
+            idx = _store.Add(key, CountPending(key));
+            _store[idx].Generated = true;
+            _store[idx].Voxels = _pool.AllocateFrom<ushort>(_emptyChunk.AsSpan());
+        }
+        else if (!_store[idx].Generated) return false;
+
+        if (!_pool.IsAlive(_store[idx].Voxels))
+        {
+            if (block == 0) return false;                             // воздух и так воздух
+            _store[idx].Voxels = _pool.AllocateFrom<ushort>(_emptyChunk.AsSpan());
+        }
+
+        var voxels = _pool.GetSpan(_store[idx].Voxels);
+        int li = Vox.Index(lx, ly, lz);
+        if (voxels[li] == block) return false;
+        voxels[li] = block;
+
+        MarkDirty(key, lx, ly, lz);
+
+        // опустел — становится воздухом (соседи по-прежнему считают его готовым)
+        if (!HasSolid(voxels) && _store.TryGetIndex(key, out int emptyIdx))
+            BecomeAir(key, emptyIdx);
+        return true;
+    }
+
+    /// <summary>Чанк и соседи по тем осям, где вксель стоит на краю (включая углы: там тоже меняется AO).</summary>
+    private void MarkDirty(ChunkKey key, int lx, int ly, int lz)
+    {
+        foreach (int dx in EdgeOffsets(lx))
+        foreach (int dy in EdgeOffsets(ly))
+        foreach (int dz in EdgeOffsets(lz))
+        {
+            var nk = new ChunkKey(key.X + dx, key.Y + dy, key.Z + dz);
+            if (!WorldLimits.InY(nk.Y) || !_store.TryGetIndex(nk, out int ni) || !_store[ni].Generated) continue;
+
+            // старый меш остаётся на экране, пока не загрузится новый
+            // чанк, который впервые показывается из-за правки игрока, появляется без анимации
+            if (dx == 0 && dy == 0 && dz == 0 && !_store[ni].Shown)
+            {
+                _store[ni].Shown = true;
+                _store[ni].FadeStart = NoFade;
+            }
+            _store[ni].Meshed = false;
+            _toMesh.Enqueue(nk);
+        }
+    }
+
+    private static int[] EdgeOffsets(int local) =>
+        local == 0 ? new[] { 0, -1 } : local == Vox.Size - 1 ? new[] { 0, 1 } : new[] { 0 };
+
+    /// <summary>Готов ли чанк для соседей: сгенерирован и хранится, либо известен как воздух.</summary>
+    private bool IsReady(ChunkKey k) =>
+        (_store.TryGetIndex(k, out int i) && _store[i].Generated) || _air.Contains(k);
+
+    /// <summary>Сколько соседей чанка ещё не готовы (только внутри мира по Y).</summary>
+    private int CountPending(ChunkKey key)
+    {
+        int pending = 0;
+        foreach (var off in NeighborOffsets)
+        {
+            var nk = key.Plus(off);
+            if (WorldLimits.InY(nk.Y) && !IsReady(nk)) pending++;
+        }
+        return pending;
+    }
+
+    /// <summary>Соседи сгенерированного чанка: уменьшаем счётчики, готовые кладём в меш.</summary>
+    private void DecrementNeighbors(ChunkKey key)
+    {
+        foreach (var off in NeighborOffsets)
+        {
+            var nk = key.Plus(off);
+            if (!WorldLimits.InY(nk.Y)) continue;
+            if (!_store.TryGetIndex(nk, out int ni)) continue;
+
+            ref var n = ref _store[ni];
+            if (n.PendingNeighbors > 0 && --n.PendingNeighbors == 0 && n.Generated && !n.Meshed)
+                _toMesh.Enqueue(nk);
+        }
+    }
+
+    /// <summary>Чанк опустел: освобождаем его память и выносим из хранилища. Соседи продолжают считать его готовым.</summary>
+    private void BecomeAir(ChunkKey key, int idx)
+    {
+        Chunk c = _store.RemoveAt(idx);
+        if (c.Gpu.IndexCount > 0) _sink.Release(c.Gpu);
+        _pool.FreeIfAlive(ref c.Voxels);
+        _pool.FreeIfAlive(ref c.MeshVertices);
+        _pool.FreeIfAlive(ref c.MeshIndices);
+        _air.Add(key);
+    }
+
+    private static bool HasSolid(ReadOnlySpan<ushort> voxels)
+    {
+        for (int i = 0; i < voxels.Length; i++)
+            if (voxels[i] != 0) return true;
+        return false;
+    }
+
+    private static ChunkKey ToChunk(int wx, int wy, int wz, out int lx, out int ly, out int lz)
+    {
+        int cx = FloorDiv(wx, Vox.Size), cy = FloorDiv(wy, Vox.Size), cz = FloorDiv(wz, Vox.Size);
+        lx = wx - cx * Vox.Size;
+        ly = wy - cy * Vox.Size;
+        lz = wz - cz * Vox.Size;
+        return new ChunkKey(cx, cy, cz);
+    }
+
+    private static int FloorDiv(int a, int b)
+    {
+        int q = a / b;
+        if (a % b != 0 && (a < 0) != (b < 0)) q--;
+        return q;
     }
 
     public void Dispose() => _gen.Dispose();

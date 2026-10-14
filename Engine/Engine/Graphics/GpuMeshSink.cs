@@ -8,7 +8,7 @@ internal sealed class GpuMeshSink : IMeshSink
     private readonly GraphicsContext _gfx;
     private readonly GpuArena _vtx, _idx;
 
-    internal GpuMeshSink(GraphicsContext gfx, GpuArena vtx, GpuArena idx) => (_gfx, _vtx, _idx) = (gfx, vtx, idx);
+    public GpuMeshSink(GraphicsContext gfx, GpuArena vtx, GpuArena idx) => (_gfx, _vtx, _idx) = (gfx, vtx, idx);
 
     public bool TryUpload(ReadOnlySpan<byte> vertices, int vertexCount, ReadOnlySpan<byte> indices, int indexCount, out GpuRange range)
     {

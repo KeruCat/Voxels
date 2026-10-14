@@ -3,7 +3,8 @@ module voxel_common;
 public struct Constants
 {
     public float4x4 ViewProjection;
-    public float4 Fade;     // x = текущее время (AppClock.Seconds), y = длительность появления, z = не используется, w = 0
+    public float4 Fade;        // x = текущее время (AppClock.Seconds), y = длительность появления
+    public float4 AtlasInfo;   // x = колонок, y = строк, z = ширина атласа px, w = высота атласа px
 };
 
 static const float FaceShade[6] = { 0.80, 0.80, 1.00, 0.50, 0.90, 0.70 };
@@ -12,26 +13,10 @@ static const float AoCurve[4] = { 0.40, 0.60, 0.80, 1.00 };
 public uint UnpackFace(uint faceByte) { return faceByte & 7u; }
 public uint UnpackAO(uint faceByte)   { return (faceByte >> 3) & 3u; }
 
-public uint UnpackBlockId(uint4 uvBlock)
+// затенение грани × ambient occlusion вершины
+public float ShadeFor(uint faceByte)
 {
-    return uvBlock.z | (uvBlock.w << 8);
-}
-
-// 1 grass, 2 dirt, 3 stone, 4 sand, 5 water, 6 snow
-static const float3 Palette[8] =
-{
-    float3(1.00, 0.00, 1.00), float3(0.36, 0.62, 0.22), float3(0.45, 0.31, 0.19), float3(0.50, 0.50, 0.52),
-    float3(0.85, 0.78, 0.52), float3(0.18, 0.38, 0.78), float3(0.95, 0.96, 0.98), float3(0.60, 0.60, 0.60)
-};
-
-public float3 BlockColor(uint id)
-{
-    return Palette[min(id, 7u)];
-}
-
-public float3 ShadedBlockColor(uint blockId, uint faceByte)
-{
-    return BlockColor(blockId) * FaceShade[UnpackFace(faceByte)] * AoCurve[UnpackAO(faceByte)];
+    return FaceShade[UnpackFace(faceByte)] * AoCurve[UnpackAO(faceByte)];
 }
 
 // Упорядоченный дизеринг 4×4 (Байер): порог в (0,1) для пикселя

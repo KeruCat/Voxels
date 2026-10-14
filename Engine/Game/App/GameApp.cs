@@ -69,6 +69,17 @@ internal sealed class GameApp : IDisposable
     private double _time;
     private bool _disposed;
 
+    // редактирование: F1 — захват мыши, ЛКМ/ПКМ — ломать/ставить блок, клавиши 1–6 — выбор блока
+    private const double ReachBlocks = 6.0;
+    private static readonly (Key Key, ushort Block)[] Hotbar =
+    [
+        (Key.Number1, 1), (Key.Number2, 2), (Key.Number3, 3),
+        (Key.Number4, 4), (Key.Number5, 5), (Key.Number6, 6),
+    ];
+    private bool _mouseCaptured;
+    private ushort _selectedBlock = 3;
+    private BlockHit? _target;
+
     private bool Minimized => _window.FramebufferSize is { X: 0 } or { Y: 0 };
 
     internal void Run(AppOptions options)
@@ -131,7 +142,7 @@ internal sealed class GameApp : IDisposable
         _vtxArena = new GpuArena(_gfx.Device!, "Chunk vertices", BindFlags.VertexBuffer,
                                  (uint)Unsafe.SizeOf<VoxelVertex>(), 40_000_000);
         _idxArena = new GpuArena(_gfx.Device!, "Chunk indices", BindFlags.IndexBuffer, sizeof(ushort), 60_000_000);
-        _renderer = new VoxelRenderer(_gfx, _vtxArena, _idxArena);
+        _renderer = new VoxelRenderer(_gfx, _vtxArena, _idxArena, Path.Combine(AppContext.BaseDirectory, "assets", "blocks.png"));
         _meshSink = new GpuMeshSink(_gfx, _vtxArena, _idxArena);
 
         _world = new VoxelWorld(_memoryPool, _meshSink, _cpu, _settings, () => new TerrainGenerator(_settings.Seed));
@@ -162,13 +173,27 @@ internal sealed class GameApp : IDisposable
         _imgui.BeginFrame(delta);
         _debugUi.Draw(delta, _title);
 
-        _input.UiWantsMouse = _imgui.WantsMouse;
+        // при захвате мыши интерфейс её не получает
+        _input.UiWantsMouse = _imgui.WantsMouse && !_mouseCaptured;
         _input.UiWantsKeyboard = _imgui.WantsKeyboard;
 
-        if (_input.KeyPressed(Key.Escape)) _window.Close();
+        if (_input.KeyPressed(Key.F1)) SetMouseCapture(!_mouseCaptured);
+        if (_input.KeyPressed(Key.Escape))
+        {
+            if (_mouseCaptured) SetMouseCapture(false);   // первый Escape отпускает мышь
+            else _window.Close();                          // второй — закрывает окно
+        }
 
-        _player.Update(delta, _input);
+        for (int i = 0; i < Hotbar.Length; i++)
+            if (_input.KeyPressed(Hotbar[i].Key)) _selectedBlock = Hotbar[i].Block;
+
+        _player.Update(delta, _input, _mouseCaptured);
         _origin.Follow(_player.X, _player.Y, _player.Z);
+
+        // цель луча — для панели и для редактирования
+        _target = BlockRaycast.Cast(_world!, _player.X, _player.Y, _player.Z, CameraMath.Forward(_player.Camera), ReachBlocks, out var hit)
+            ? hit : null;
+        HandleBlockEditing();
 
         var local = _player.LocalPosition(_origin);
         int pcx = (int)Math.Floor(_player.X / Chunk.Size);
@@ -177,6 +202,51 @@ internal sealed class GameApp : IDisposable
         _world!.Update(pcx, pcz, prio);
 
         _input.EndFrame();
+    }
+
+    /// <summary>ЛКМ — сломать блок под прицелом, ПКМ — поставить выбранный блок на грань, в которую смотрим.</summary>
+    private void HandleBlockEditing()
+    {
+        // пока мышь свободна, ЛКМ по окну захватывает её (ломания в этот клик нет)
+        if (!_mouseCaptured)
+        {
+            if (_input.MouseClicked(MouseButton.Left)) SetMouseCapture(true);
+            return;
+        }
+        if (_input.UiWantsMouse || _target is not { } t) return;
+
+        if (_input.MouseClicked(MouseButton.Left))
+        {
+            _world!.SetBlock(t.X, t.Y, t.Z, 0);
+            return;
+        }
+
+        if (!_input.MouseClicked(MouseButton.Right)) return;
+        if (t.NX == 0 && t.NY == 0 && t.NZ == 0) return;   // луч начался внутри блока — ставить некуда
+
+        int px = t.X + t.NX, py = t.Y + t.NY, pz = t.Z + t.NZ;
+        if (PlayerOverlaps(px, py, pz)) return;             // не замуровываем себя
+        if (_world!.TryGetBlock(px, py, pz, out ushort there) && there == 0)
+            _world.SetBlock(px, py, pz, _selectedBlock);
+    }
+
+    /// <summary>Игрок — коробка 0.6 × 1.8 м; глаза (X, Y, Z) на 1.6 м над ногами.</summary>
+    private bool PlayerOverlaps(int px, int py, int pz)
+    {
+        double minX = _player.X - 0.3, maxX = _player.X + 0.3;
+        double minY = _player.Y - 1.6, maxY = _player.Y + 0.2;
+        double minZ = _player.Z - 0.3, maxZ = _player.Z + 0.3;
+        return px < maxX && px + 1 > minX
+            && py < maxY && py + 1 > minY
+            && pz < maxZ && pz + 1 > minZ;
+    }
+
+    private void SetMouseCapture(bool on)
+    {
+        _mouseCaptured = on;
+        var mouse = _inputContext?.Mice.FirstOrDefault();
+        if (mouse != null) mouse.Cursor.CursorMode = on ? CursorMode.Disabled : CursorMode.Normal;
+        _input.ResetMouseTracking();
     }
 
     private void OnRender(double dt)
@@ -233,7 +303,7 @@ internal sealed class GameApp : IDisposable
         if (_world == null) return;
 
         ImGui.Separator();
-        ImGui.Text(FormattableString.Invariant($"Chunks: {_world.ChunkCount}  visible: {_world.VisibleCount}  drawn: {_drawn}"));
+        ImGui.Text(FormattableString.Invariant($"Chunks: {_world.ChunkCount}  air: {_world.AirCount}  visible: {_world.VisibleCount}  drawn: {_drawn}"));
         ImGui.Text(FormattableString.Invariant($"World pos: {_player.X:F1}  {_player.Y:F1}  {_player.Z:F1}"));
         ImGui.Text($"Float origin (chunk): {_origin.X}  {_origin.Y}  {_origin.Z}");
         ImGui.Text(FormattableString.Invariant($"Queues: spawn {_world.PendingSpawn}  gen {_world.PendingGenerate}  mesh {_world.PendingMesh}  upload {_world.PendingUpload}"));
@@ -249,6 +319,13 @@ internal sealed class GameApp : IDisposable
             };
         }
         ImGui.Text(FormattableString.Invariant($"draw prep + submit: {_drawMs:F2} ms"));
+        string mouseState = _mouseCaptured ? "captured (F1 releases)" : "free (F1 captures)";
+        ImGui.Text($"Mouse: {mouseState}");
+        ImGui.Text(FormattableString.Invariant($"Block: {_selectedBlock} (keys 1-6), LMB break, RMB place"));
+        string target = _target is { } t
+            ? FormattableString.Invariant($"Target: {t.X} {t.Y} {t.Z}  block {t.Block}")
+            : "Target: none";
+        ImGui.Text(target);
     }
 
     // ───────────── завершение (обратно созданию) ─────────────

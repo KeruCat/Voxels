@@ -100,8 +100,8 @@ public sealed class GreedyMesher
 
     // ───────────── AO ─────────────
 
-    private static bool UniformU(int ao) => ((ao) & 3) == ((ao >> 2) & 3) && ((ao >> 6) & 3) == ((ao >> 4) & 3);
-    private static bool UniformV(int ao) => ((ao) & 3) == ((ao >> 6) & 3) && ((ao >> 2) & 3) == ((ao >> 4) & 3);
+    internal static bool UniformU(int ao) => ((ao) & 3) == ((ao >> 2) & 3) && ((ao >> 6) & 3) == ((ao >> 4) & 3);
+    internal static bool UniformV(int ao) => ((ao) & 3) == ((ao >> 6) & 3) && ((ao >> 2) & 3) == ((ao >> 4) & 3);
 
     private bool OutsideSolid(int x, int y, int z) => OutsideSampler != null && OutsideSampler(x, y, z) != 0;
 
@@ -133,7 +133,7 @@ public sealed class GreedyMesher
 
     // ───────────── Вывод квада ─────────────
 
-    private void EmitQuad(int d, int u, int v, int plane, int i, int j, int w, int h, int c)
+        private void EmitQuad(int d, int u, int v, int plane, int i, int j, int w, int h, int c)
     {
         int abs = Math.Abs(c);
         ushort block = (ushort)(abs & 0xFFFF);
@@ -141,17 +141,19 @@ public sealed class GreedyMesher
         int a0 = ao & 3, a1 = (ao >> 2) & 3, a2 = (ao >> 4) & 3, a3 = (ao >> 6) & 3;
         int face = d * 2 + (c > 0 ? 0 : 1);
 
-        int vb = VertexCount;
-        // углы: p0, p0+du, p0+du+dv, p0+dv  (u × v = d для циклических осей)
-        Set(vb + 0, d, u, v, plane, i, j, face, a0, 0, 0, block);
-        Set(vb + 1, d, u, v, plane, i + w, j, face, a1, w, 0, block);
-        Set(vb + 2, d, u, v, plane, i + w, j + h, face, a2, w, h, block);
-        Set(vb + 3, d, u, v, plane, i, j + h, face, a3, 0, h, block);
+        // тайл по блоку и грани; на гранях ±X горизонталь текстуры — ось Z, поэтому повтор по U/V меняется местами
+        int tile = BlockTable.Tile(block, face);
+        int texW = d == 0 ? h : w;
+        int texH = d == 0 ? w : h;
 
-        // диагональ: через более тёмную пару углов (p0–p2 по умолчанию)
+        int vb = VertexCount;
+        Set(vb + 0, d, u, v, plane, i,     j,     face, a0, 0, 0, texW, texH, tile);
+        Set(vb + 1, d, u, v, plane, i + w, j,     face, a1, 1, 0, texW, texH, tile);
+        Set(vb + 2, d, u, v, plane, i + w, j + h, face, a2, 1, 1, texW, texH, tile);
+        Set(vb + 3, d, u, v, plane, i,     j + h, face, a3, 0, 1, texW, texH, tile);
+
         bool altDiagonal = a0 + a2 > a1 + a3;
         bool reversed = (c < 0) == CounterClockwiseFront;
-
         int[] t = altDiagonal
             ? (reversed ? AltRev : Alt)
             : (reversed ? DefRev : Def);
@@ -168,12 +170,21 @@ public sealed class GreedyMesher
     private static readonly int[] Alt = [1, 2, 3, 1, 3, 0];
     private static readonly int[] AltRev = [1, 3, 2, 1, 0, 3];
 
-    private void Set(int idx, int d, int u, int v, int pd, int pu, int pv, int face, int ao, int tu, int tv, ushort block)
+        private void Set(int idx, int d, int u, int v, int pd, int pu, int pv, int face, int ao, int cu, int cv, int texW, int texH, int tile)
     {
         ref VoxelVertex vert = ref Vertices[idx];
-        _p[d] = pd; _p[u] = pu; _p[v] = pv;
-        vert.X = (byte)_p[0]; vert.Y = (byte)_p[1]; vert.Z = (byte)_p[2];
+        // позиция: ось d = pd, ось u = pu, ось v = pv
+        int ax0 = d == 0 ? pd : u == 0 ? pu : pv;
+        int ax1 = d == 1 ? pd : u == 1 ? pu : pv;
+        int ax2 = d == 2 ? pd : u == 2 ? pu : pv;
+        vert.X = (byte)ax0; vert.Y = (byte)ax1; vert.Z = (byte)ax2;
         vert.Face = (byte)(face | (ao << 3));
-        vert.U = (byte)tu; vert.V = (byte)tv; vert.BlockId = block;
+        // угол в координатах текстуры. Вертикаль текстуры (V) на боковых гранях перевёрнута:
+        // строка 0 тайла — верх, поэтому верх блока (большой Y) должен попадать на строку 0.
+        int cuT, cvT;
+        if (d == 0) { cuT = cv; cvT = 1 - cu; }     // ±X: горизонталь = Z (ось v плоскости), вертикаль = Y (ось u)
+        else if (d == 2) { cuT = cu; cvT = 1 - cv; } // ±Z: горизонталь = X (ось u), вертикаль = Y (ось v)
+        else { cuT = cu; cvT = cv; }                 // ±Y: верх/низ, ориентация не важна
+        vert.Packed = VoxelVertex.Pack(tile, texW, texH, cuT, cvT);
     }
 }

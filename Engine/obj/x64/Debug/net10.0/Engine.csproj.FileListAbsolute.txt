@@ -71,3 +71,4 @@ C:\Users\false\OneDrive\Desktop\Voxels\Engine\obj\x64\Debug\net10.0\refint\Engin
 C:\Users\false\OneDrive\Desktop\Voxels\Engine\obj\x64\Debug\net10.0\Engine.pdb
 C:\Users\false\OneDrive\Desktop\Voxels\Engine\obj\x64\Debug\net10.0\Engine.genruntimeconfig.cache
 C:\Users\false\OneDrive\Desktop\Voxels\Engine\obj\x64\Debug\net10.0\ref\Engine.dll
+C:\Users\false\OneDrive\Desktop\Voxels\Engine\bin\x64\Debug\net10.0\Assets\blocks.png

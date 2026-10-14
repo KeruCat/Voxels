@@ -21,9 +21,10 @@ internal sealed class Player
     public Vector3 Velocity;
     public Camera Camera { get; } = new() { Pitch = -0.3f };
 
-    internal void Update(float dt, InputState input)
+    /// <param name="mouseLook">true — мышь захвачена (F1): взгляд крутится движением мыши.</param>
+    public void Update(float dt, InputState input, bool mouseLook)
     {
-        Look(input);
+        Look(input, mouseLook);
         Move(dt, input);
     }
 
@@ -31,9 +32,9 @@ internal sealed class Player
     public Vector3 LocalPosition(FloatingOrigin origin) =>
         new((float)origin.ToLocalX(X), (float)origin.ToLocalY(Y), (float)origin.ToLocalZ(Z));
 
-    private void Look(InputState input)
+    private void Look(InputState input, bool mouseLook)
     {
-        if (!input.MouseHeld(MouseButton.Right)) return;
+        if (!mouseLook) return;
 
         Vector2 d = input.MouseDelta;
         if (d == Vector2.Zero) return;
