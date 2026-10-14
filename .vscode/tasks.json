@@ -7,7 +7,7 @@
       "command": "dotnet",
       "args": [
         "build",
-        "${workspaceFolder}/Engine/Engine.csproj",
+        "${workspaceFolder}/Game/Game.csproj",
         "-c",
         "Debug",
         "-p:Platform=x64",
@@ -30,7 +30,7 @@
       "command": "dotnet",
       "args": [
         "build",
-        "${workspaceFolder}/Engine/Engine.csproj",
+        "${workspaceFolder}/Game/Game.csproj",
         "-c",
         "Release",
         "-p:Platform=x64",
@@ -46,114 +46,33 @@
       "command": "dotnet",
       "args": [
         "clean",
-        "${workspaceFolder}/Engine/Engine.csproj",
+        "${workspaceFolder}/Game/Game.csproj",
         "-p:Platform=x64"
       ],
       "problemMatcher": "$msCompile"
     },
     {
-      "label": "shaders: vertex",
-      "type": "shell",
-      "command": "slangc",
-      "args": [
-        "Shaders/voxel.slang",
-        "-I",
-        "Shaders",
-        "-entry",
-        "VSMain",
-        "-stage",
-        "vertex",
-        "-target",
-        "hlsl",
-        "-matrix-layout-row-major",
-        "-line-directive-mode",
-        "none",
-        "-o",
-        "Assets/voxel.vsh",
-        "-diagnostic-color",
-        "never"
-      ],
-      "options": {
-        "cwd": "${workspaceFolder}"
-      },
-      "problemMatcher": {
-        "owner": "slang",
-        "fileLocation": [
-          "relative",
-          "${workspaceFolder}"
-        ],
-        "pattern": [
-          {
-            "regexp": "^(error|warning)\\[E?(\\d+)\\]: (.*)$",
-            "severity": 1,
-            "code": 2,
-            "message": 3
-          },
-          {
-            "regexp": "^\\s*--> (.+?):(\\d+):(\\d+)$",
-            "file": 1,
-            "line": 2,
-            "column": 3
-          }
-        ]
-      }
-    },
-    {
-      "label": "shaders: fragment",
-      "type": "shell",
-      "command": "slangc",
-      "args": [
-        "Shaders/voxel.slang",
-        "-I",
-        "Shaders",
-        "-entry",
-        "FSMain",
-        "-stage",
-        "fragment",
-        "-target",
-        "hlsl",
-        "-matrix-layout-row-major",
-        "-line-directive-mode",
-        "none",
-        "-o",
-        "Assets/voxel.psh",
-        "-diagnostic-color",
-        "never"
-      ],
-      "options": {
-        "cwd": "${workspaceFolder}"
-      },
-      "problemMatcher": {
-        "owner": "slang",
-        "fileLocation": [
-          "relative",
-          "${workspaceFolder}"
-        ],
-        "pattern": [
-          {
-            "regexp": "^(error|warning)\\[E?(\\d+)\\]: (.*)$",
-            "severity": 1,
-            "code": 2,
-            "message": 3
-          },
-          {
-            "regexp": "^\\s*--> (.+?):(\\d+):(\\d+)$",
-            "file": 1,
-            "line": 2,
-            "column": 3
-          }
-        ]
-      }
-    },
-    {
       "label": "shaders",
-      "dependsOn": [
-        "shaders: vertex",
-        "shaders: fragment"
+      "type": "process",
+      "command": "dotnet",
+      "args": [
+        "run",
+        "--project",
+        "${workspaceFolder}/Tools/ShaderTool",
+        "-c",
+        "Release",
+        "--",
+        "build",
+        "${workspaceFolder}/Game/Assets/shaders.json"
       ],
-      "dependsOrder": "sequence",
-      "group": "build",
-      "problemMatcher": []
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": "$msCompile",
+      "presentation": {
+        "reveal": "always",
+        "clear": true
+      }
     }
   ]
 }

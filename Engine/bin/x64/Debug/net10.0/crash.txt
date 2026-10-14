@@ -1,5 +1,0 @@
-System.Exception: Voxel shader: atlas texture variable 'atlas_0' not found.
-   at Game.Render.VoxelRenderer..ctor(GraphicsContext gfx, GpuArena vtx, GpuArena idx, String atlasPath) in C:\Users\false\OneDrive\Desktop\Voxels\Engine\Game\Render\VoxelRenderer.cs:line 142
-   at Game.App.GameApp.CreateWorld() in C:\Users\false\OneDrive\Desktop\Voxels\Engine\Game\App\GameApp.cs:line 145
-   at Game.App.GameApp.Run(AppOptions options) in C:\Users\false\OneDrive\Desktop\Voxels\Engine\Game\App\GameApp.cs:line 99
-   at Engine.Program.Run(AppOptions options) in C:\Users\false\OneDrive\Desktop\Voxels\Engine\Engine\App\Program.cs:line 26

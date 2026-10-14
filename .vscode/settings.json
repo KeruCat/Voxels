@@ -1,5 +1,6 @@
 {
   "dotnet.server.useOmnisharp": false,
+  "dotnet.defaultSolution": "Voxels.sln",
   "files.associations": {
     "*.slang": "slang",
     "*.vsh": "hlsl",
@@ -13,7 +14,6 @@
     "**/bin/**": true,
     "**/obj/**": true
   },
-  "dotnet.defaultSolution": "Engine.slnx",
   "editor.formatOnSave": false,
   "[csharp]": { "editor.defaultFormatter": "ms-dotnettools.csharp" }
 }

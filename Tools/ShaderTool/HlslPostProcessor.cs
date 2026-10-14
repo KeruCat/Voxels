@@ -39,6 +39,7 @@ public static class HlslPostProcessor
 
         s = StripConditionalBlocks(s, BlocksToStrip);
         s = StripLineDirectives(s);
+        s = NormalizeSemantics(s);
         s = RenameCBufferBlocks(s);
 
         s = stage switch
@@ -85,7 +86,21 @@ public static class HlslPostProcessor
 
     private static string StripLineDirectives(string s)
         => Regex.Replace(s, @"^[ \t]*#line\b.*\n?", "", RegexOptions.Multiline);
+    // ───────────── 3b. семантики ─────────────
 
+    /// <summary>
+    /// Член структуры: [модификаторы] Тип Имя : СЕМАНТИКА;
+    /// Семантика = ИМЯ + индекс + лишний «0», который добавляет slang.
+    /// </summary>
+    private static readonly Regex SlangSemantic = new(
+        @"^(?<pre>[ \t]*(?:\w+[ \t]+)+\w+(?:\[\d+\])?[ \t]*:[ \t]*)" +
+        @"(?<name>(?!SV_)[A-Z_]+)(?<idx>\d+)0(?<post>[ \t]*;)",
+        RegexOptions.Multiline);
+
+    /// <summary>`TEXCOORD10` → `TEXCOORD1`, `COLOR00` → `COLOR0`, `TEXCOORD30` → `TEXCOORD3`.</summary>
+    private static string NormalizeSemantics(string s)
+        => SlangSemantic.Replace(s, m =>
+            m.Groups["pre"].Value + m.Groups["name"].Value + m.Groups["idx"].Value + m.Groups["post"].Value);
     // ───────────── 4. cbuffer ─────────────
 
     private static readonly Regex SingleMemberCBuffer =
