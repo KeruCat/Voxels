@@ -1,4 +1,4 @@
-namespace Engine;
+namespace Engine.App;
 internal static class CrashLog
 {
     public static void Write(string? text)

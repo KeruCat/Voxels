@@ -1,6 +1,6 @@
 using System.Runtime.InteropServices;
 
-namespace Engine;
+namespace Engine.App;
 
 internal static class Program
 {

@@ -24,6 +24,7 @@ public struct Chunk
     /// <summary>Меш уже запланирован или не нужен. Защищает от повторного меширования.</summary>
     public bool Meshed;
 
+    public MetaSlot Meta;                    // метаданные вокселей (ленивые: без них ничего не занято)
     public PoolHandle<VoxelVertex> MeshVertices;
     public PoolHandle<ushort> MeshIndices;
     public int MeshVertexCount, MeshIndexCount;

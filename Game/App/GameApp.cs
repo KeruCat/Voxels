@@ -79,12 +79,11 @@ internal sealed class GameApp : IDisposable
     private double _time;
     private bool _disposed;
 
-    // редактирование: F1 — захват мыши, ЛКМ/ПКМ — ломать/ставить блок, клавиши 1–6 — выбор блока
     private const double ReachBlocks = 6.0;
     private static readonly (Key Key, ushort Block)[] Hotbar =
     [
         (Key.Number1, 1), (Key.Number2, 2), (Key.Number3, 3),
-        (Key.Number4, 4), (Key.Number5, 5), (Key.Number6, 6),
+        (Key.Number4, 4), (Key.Number5, 5), (Key.Number6, 6), (Key.Number7, 11), (Key.Number8, 10),
     ];
     private bool _mouseCaptured;
     private ushort _selectedBlock = 3;
@@ -226,6 +225,14 @@ internal sealed class GameApp : IDisposable
         }
         if (_input.UiWantsMouse || _target is not { } t) return;
 
+        // R — повернуть блок под прицелом (печка и бревно); меш перестраивается через SetBlock
+        if (_input.KeyPressed(Key.R))
+        {
+            if (_world!.TryGetBlock(t.X, t.Y, t.Z, out ushort current))
+                _world.SetBlock(t.X, t.Y, t.Z, BlockTable.Rotated(current));
+            return;
+        }
+
         if (_input.MouseClicked(MouseButton.Left))
         {
             _world!.SetBlock(t.X, t.Y, t.Z, 0);
@@ -238,7 +245,12 @@ internal sealed class GameApp : IDisposable
         int px = t.X + t.NX, py = t.Y + t.NY, pz = t.Z + t.NZ;
         if (PlayerOverlaps(px, py, pz)) return;             // не замуровываем себя
         if (_world!.TryGetBlock(px, py, pz, out ushort there) && there == 0)
-            _world.SetBlock(px, py, pz, _selectedBlock);
+        {
+            // лицо блока смотрит на игрока: направление от блока к игроку — против взгляда
+            var fwd = CameraMath.Forward(_player.Camera);
+            int facing = BlockTable.PlacementFacing(_selectedBlock, -fwd.X, -fwd.Z, t.NX, t.NY, t.NZ);
+            _world.SetBlock(px, py, pz, BlockState.Make(_selectedBlock, facing));
+        }
     }
 
     /// <summary>Игрок — коробка 0.6 × 1.8 м; глаза (X, Y, Z) на 1.6 м над ногами.</summary>
@@ -332,7 +344,7 @@ internal sealed class GameApp : IDisposable
         ImGui.Text(FormattableString.Invariant($"draw prep + submit: {_drawMs:F2} ms"));
         string mouseState = _mouseCaptured ? "captured (F1 releases)" : "free (F1 captures)";
         ImGui.Text($"Mouse: {mouseState}");
-        ImGui.Text(FormattableString.Invariant($"Block: {_selectedBlock} (keys 1-6), LMB break, RMB place"));
+        ImGui.Text(FormattableString.Invariant($"Block: {_selectedBlock} (keys 1-8), R rotate, LMB break, RMB place"));
         string target = _target is { } t
             ? FormattableString.Invariant($"Target: {t.X} {t.Y} {t.Z}  block {t.Block}")
             : "Target: none";

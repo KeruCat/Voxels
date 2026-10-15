@@ -1,7 +1,7 @@
 using System.CommandLine;
 using Engine.Graphics;
 
-namespace Engine;
+namespace Engine.App;
 internal sealed class AppCli {
     private const GraphicsApi DefaultApi = GraphicsApi.VK;
     private const int DefaultFps = 144;

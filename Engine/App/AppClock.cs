@@ -1,7 +1,7 @@
 
 using System.Diagnostics;
 
-namespace Engine;
+namespace Engine.App;
 internal static class AppClock
 {
     private static readonly long T0 = Stopwatch.GetTimestamp();

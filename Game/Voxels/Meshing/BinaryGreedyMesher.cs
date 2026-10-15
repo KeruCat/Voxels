@@ -307,12 +307,13 @@ public sealed class BinaryGreedyMesher
         int tile = BlockTable.Tile(block, face);
         int texW = d == 0 ? h : w;
         int texH = d == 0 ? w : h;
+        bool swap = BlockTable.SwapGrain(block, d);
 
         int vb = VertexCount;
-        Set(vb + 0, d, u, v, plane, i,     j,     face, a0, 0, 0, texW, texH, tile);
-        Set(vb + 1, d, u, v, plane, i + w, j,     face, a1, 1, 0, texW, texH, tile);
-        Set(vb + 2, d, u, v, plane, i + w, j + h, face, a2, 1, 1, texW, texH, tile);
-        Set(vb + 3, d, u, v, plane, i,     j + h, face, a3, 0, 1, texW, texH, tile);
+        Set(vb + 0, d, u, v, plane, i,     j,     face, a0, 0, 0, texW, texH, tile, swap);
+        Set(vb + 1, d, u, v, plane, i + w, j,     face, a1, 1, 0, texW, texH, tile, swap);
+        Set(vb + 2, d, u, v, plane, i + w, j + h, face, a2, 1, 1, texW, texH, tile, swap);
+        Set(vb + 3, d, u, v, plane, i,     j + h, face, a3, 0, 1, texW, texH, tile, swap);
 
         bool altDiagonal = a0 + a2 > a1 + a3;
         bool reversed = (c < 0) == CounterClockwiseFront;
@@ -332,7 +333,7 @@ public sealed class BinaryGreedyMesher
     private static readonly int[] Alt = [1, 2, 3, 1, 3, 0];
     private static readonly int[] AltRev = [1, 3, 2, 1, 0, 3];
 
-        private void Set(int idx, int d, int u, int v, int pd, int pu, int pv, int face, int ao, int cu, int cv, int texW, int texH, int tile)
+        private void Set(int idx, int d, int u, int v, int pd, int pu, int pv, int face, int ao, int cu, int cv, int texW, int texH, int tile, bool swap)
     {
         ref VoxelVertex vert = ref Vertices[idx];
         // позиция: ось d = pd, ось u = pu, ось v = pv
@@ -347,6 +348,8 @@ public sealed class BinaryGreedyMesher
         if (d == 0) { cuT = cv; cvT = 1 - cu; }     // ±X: горизонталь = Z (ось v плоскости), вертикаль = Y (ось u)
         else if (d == 2) { cuT = cu; cvT = 1 - cv; } // ±Z: горизонталь = X (ось u), вертикаль = Y (ось v)
         else { cuT = cu; cvT = cv; }                 // ±Y: верх/низ, ориентация не важна
+        // кора на бревне: волокна вдоль оси бревна — текстура поворачивается на 90°
+        if (swap) { (cuT, cvT) = (cvT, cuT); (texW, texH) = (texH, texW); }
         vert.Packed = VoxelVertex.Pack(tile, texW, texH, cuT, cvT);
     }
 }

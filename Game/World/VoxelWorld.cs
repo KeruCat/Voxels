@@ -81,6 +81,29 @@ public sealed class VoxelWorld : IDisposable
     // ── для отладки: размеры очередей и время шагов последнего кадра (мс) ──
     public int PendingSpawn => _spawnList.Count - _spawnCursor;
     public int AirCount => _air.Count;
+
+    /// <summary>Хранилище компонентов мира (сундуки, таблички и т.п.).</summary>
+    public ComponentStore Components { get; } = new();
+
+    /// <summary>Метаданные вокселя по мировым координатам. false — нет метаданных или чанк не готов.</summary>
+    public bool TryGetMeta(int wx, int wy, int wz, out VoxelMeta meta)
+    {
+        meta = default;
+        var key = ToChunk(wx, wy, wz, out int lx, out int ly, out int lz);
+        if (!_store.TryGetIndex(key, out int idx)) return false;
+        return ChunkMeta.TryGet(_pool, _store[idx].Meta, Vox.Index(lx, ly, lz), out meta);
+    }
+
+    /// <summary>Задаёт метаданные вокселя. Меш не перестраивается: метаданные не меняют геометрию.</summary>
+    public bool SetMeta(int wx, int wy, int wz, VoxelMeta meta)
+    {
+        var key = ToChunk(wx, wy, wz, out int lx, out int ly, out int lz);
+        if (!WorldLimits.InY(key.Y) || !_store.TryGetIndex(key, out int idx) || !_store[idx].Generated) return false;
+        int li = Vox.Index(lx, ly, lz);
+        if (BlockState.Type(_pool.GetSpan(_store[idx].Voxels)[li]) == 0) return false;   // у воздуха не бывает метаданных
+        ChunkMeta.Set(_pool, ref _store[idx].Meta, li, meta);
+        return true;
+    }
     public int PendingGenerate => _toGenerate.Count;
     public int PendingMesh => _toMesh.Count;
     public int PendingUpload => _toUpload.Count;
@@ -261,6 +284,7 @@ public sealed class VoxelWorld : IDisposable
         _pool.FreeIfAlive(ref c.Voxels);
         _pool.FreeIfAlive(ref c.MeshVertices);
         _pool.FreeIfAlive(ref c.MeshIndices);
+        ChunkMeta.Free(_pool, ref c.Meta);
         if (c.Gpu.IndexCount > 0) _sink.Release(c.Gpu);
     }
 
@@ -606,6 +630,7 @@ public sealed class VoxelWorld : IDisposable
     /// </summary>
     public bool SetBlock(int wx, int wy, int wz, ushort block)
     {
+        block = BlockState.Normalize(block);
         var key = ToChunk(wx, wy, wz, out int lx, out int ly, out int lz);
         if (!WorldLimits.InY(key.Y)) return false;
 
@@ -629,11 +654,13 @@ public sealed class VoxelWorld : IDisposable
         int li = Vox.Index(lx, ly, lz);
         if (voxels[li] == block) return false;
         voxels[li] = block;
+        // блок заменён на воздух — его метаданные больше не нужны
+        if (block == 0) ChunkMeta.Remove(_pool, ref _store[idx].Meta, li);
 
         MarkDirty(key, lx, ly, lz);
 
         // опустел — становится воздухом (соседи по-прежнему считают его готовым)
-        if (!HasSolid(voxels) && _store.TryGetIndex(key, out int emptyIdx))
+        if (!HasSolid(voxels) && _store.TryGetIndex(key, out int emptyIdx) && _store[emptyIdx].Meta.Count == 0)
             BecomeAir(key, emptyIdx);
         return true;
     }
@@ -702,6 +729,7 @@ public sealed class VoxelWorld : IDisposable
         _pool.FreeIfAlive(ref c.Voxels);
         _pool.FreeIfAlive(ref c.MeshVertices);
         _pool.FreeIfAlive(ref c.MeshIndices);
+        ChunkMeta.Free(_pool, ref c.Meta);
         _air.Add(key);
     }
 
